@@ -8,6 +8,7 @@ const app = express();
 const httpServer = http.createServer(app);
 import { Server } from 'socket.io';
 import authRouter from './routes/authRoutes.js';
+import userRouter from './routes/userRoutes.js';
 const io = new Server(httpServer);
 
 config()
@@ -32,6 +33,7 @@ app.use((req, res, next) => {
 // Define Routes
 
 app.use('/api/auth', authRouter);
+app.use('/api/user', userRouter)
 // app.use('/api/auth', require('./routes/api/auth'));
 // app.use('/api/posts', require('./routes/api/posts'));
 // app.use('/api/profile', require('./routes/api/profile'));
