@@ -12,8 +12,9 @@ import {
 } from '../utils/Constants.js';
 import FollowerFollowing from '../models/FollowerFollowing.js';
 import User from '../models/User.js';
+import mongoose , { ObjectId } from 'mongoose';
 
-// @desc    Get User Information
+// @desc    Get User Information for Personal Profile
 // @route   GET /api/user/getInfo
 // @access  Private
 const getInfo = async (req, res) => {
@@ -39,10 +40,40 @@ const getInfo = async (req, res) => {
     }
 };
 
+// @desc    Get User Information for Other Users on Platform
+// @route   GET /api/user/getOtherUserInfo
+// @access  Private
+const getOthersInfo = async (req, res) => {
+    try {
+
+        const { userId } = req.body;
+        // console.log("WHT" + ObjectId(userId.trim()))
+        // let objectId = mongoose.Types.ObjectId(userId.trim());
+        // console.log("WHT" + objectId)
+        const user = await User.findById(userId.trim()).select('-password')
+        
+        if (!user) {
+            const failureResponse = new FailureResponse(FAILURE, USER_NOT_FOUND, '');
+            const response = failureResponse.response();
+            return res.status(404).json(response);
+        }
+        
+        res.status(201).json({
+            status: SUCCESS,
+            message: DATA_FETCHED,
+            data: {
+                user: user
+            },
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+};
 
 // @desc    Get All Users
 // @route   GET /api/user/getAllUsers
-// @access  Public
+// @access  Private
 const getAllUsers = async (req, res) => {
     try {
         const users = await User.find();
@@ -62,7 +93,7 @@ const getAllUsers = async (req, res) => {
 
 // @desc    Follow A User
 // @route   POST /api/user/follow
-// @access  Public
+// @access  Private
 const follow = async (req, res) => {
     try {
         const { followeeID } = req.body;
@@ -72,7 +103,7 @@ const follow = async (req, res) => {
         if (user) {
             const failureResponse = new FailureResponse(FAILURE, USER_ALREADY_FOLLOWED, '');
             const response = failureResponse.response();
-            return res.status(404).json(response);
+            return res.status(201).json(response);
         }
         
         const relation = new FollowerFollowing({
@@ -85,9 +116,33 @@ const follow = async (req, res) => {
         res.status(201).json({
             status: SUCCESS,
             message: USER_FOLLOWED,
-            data: {
-                relation: relation
-            }
+            data: ''
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+// @desc    Check if User is followed or not
+// @route   POST /api/user/follow
+// @access  Private
+const checkIfUserFollowedOrNot = async (req, res) => {
+    try {
+        const { followeeID } = req.body;
+        
+        const user = await FollowerFollowing.findOne({"followeeID": followeeID})
+                
+        if (user) {
+            const failureResponse = new FailureResponse(SUCCESS, USER_FOLLOWED, '');
+            const response = failureResponse.response();
+            return res.status(201).json(response);
+        }
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: USER_NOT_FOLLOWED,
+            data: ''
         });
     } catch (error) {
         console.log(error);
@@ -142,8 +197,11 @@ const getAllFollowing = async (req, res) => {
 
 const getAllFollowersAndFollowing = async (req, res) => {
     try {
-        const followers = await FollowerFollowing.find({ "followeeId": req.userId }).populate('followeeId').populate('followerId')
-        const following = await FollowerFollowing.find({ "followerId": req.userId }).populate('followeeId').populate('followerId')
+
+        const { userID } = req.body
+
+        const followers = await FollowerFollowing.find({ "followeeId": userID }).populate('followeeId').populate('followerId')
+        const following = await FollowerFollowing.find({ "followerId": `userID` }).populate('followeeId').populate('followerId')
         
         res.status(201).json({
             status: SUCCESS,
@@ -188,4 +246,6 @@ const unfollow = async (req, res) => {
 }
 
 
-export { getInfo, getAllUsers, follow, getAllFollowersAndFollowing, getAllFollowers, getAllFollowing, unfollow };
+
+
+export { getInfo, getOthersInfo , getAllUsers, follow, getAllFollowersAndFollowing, getAllFollowers, getAllFollowing, unfollow, checkIfUserFollowedOrNot };
