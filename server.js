@@ -2,7 +2,6 @@ import express, { json, urlencoded } from 'express';
 import connectDB from './config/db.js';
 import { SUCCESS } from './utils/constants.js';
 import http from 'http'
-import dotenv from "dotenv";
 import { config } from "dotenv"
 const app = express();
 const httpServer = http.createServer(app);
@@ -13,12 +12,14 @@ const io = new Server(httpServer);
 
 config()
 
-//Connect Database
-connectDB();
 
 // Init MiddleWare
 app.use(json());
 app.use(urlencoded({ extended: true }));
+
+
+//Connect Database
+connectDB();
 
 io.on('connection', (socket) => {
   console.log(socket.id);
