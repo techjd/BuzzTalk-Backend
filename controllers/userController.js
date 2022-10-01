@@ -97,21 +97,20 @@ const getAllUsers = async (req, res) => {
 const follow = async (req, res) => {
     try {
         const { followeeID } = req.body;
-        
-        const user = await FollowerFollowing.findOne({"followeeID": followeeID})
+        console.log(followeeID)
+        const user = await FollowerFollowing.findOne({"followeeId": followeeID})
                 
         if (user) {
+            console.log("WTH!!!")
             const failureResponse = new FailureResponse(FAILURE, USER_ALREADY_FOLLOWED, '');
             const response = failureResponse.response();
             return res.status(201).json(response);
         }
         
-        const relation = new FollowerFollowing({
+        const relation = await FollowerFollowing.create({
             followerId: req.userId,
             followeeId: followeeID
         })
-        
-        await relation.save()
 
         res.status(201).json({
             status: SUCCESS,
@@ -130,9 +129,17 @@ const follow = async (req, res) => {
 const checkIfUserFollowedOrNot = async (req, res) => {
     try {
         const { followeeID } = req.body;
-        
-        const user = await FollowerFollowing.findOne({"followeeID": followeeID})
-                
+        console.log(followeeID)
+        // const user = await FollowerFollowing.findOne({"followeeId": followeeID})
+
+        const user = await FollowerFollowing.findOne({
+            $and: [
+                {"followeeId": followeeID},
+                {"followerId": req.userId}
+            ]
+        })
+
+        console.log(user)
         if (user) {
             const failureResponse = new FailureResponse(SUCCESS, USER_FOLLOWED, '');
             const response = failureResponse.response();
@@ -197,12 +204,13 @@ const getAllFollowing = async (req, res) => {
 
 const getAllFollowersAndFollowing = async (req, res) => {
     try {
+        const { userId } = req.body
+        console.log("Request Came")
+        // const followers = await FollowerFollowing.find({ "followeeId": req.userId }).populate({path: 'followeeId', select: '-password'}).populate({path: 'followerId', select: '-password', })
+        // const following = await FollowerFollowing.find({ "followerId": req.userId}).populate({path: 'followeeId', select: '-password'}).populate({path: 'followerId', select: '-password', })
+        const followers = await FollowerFollowing.find({ "followeeId": userId })
+        const following = await FollowerFollowing.find({ "followerId": userId })
 
-        const { userID } = req.body
-
-        const followers = await FollowerFollowing.find({ "followeeId": userID }).populate('followeeId').populate('followerId')
-        const following = await FollowerFollowing.find({ "followerId": `userID` }).populate('followeeId').populate('followerId')
-        
         res.status(201).json({
             status: SUCCESS,
             message: ALL_FOLLOWERS,

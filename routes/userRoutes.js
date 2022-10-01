@@ -11,5 +11,5 @@ userRouter.post('/checkIfUserFollowedOrNot', protect, checkIfUserFollowedOrNot)
 userRouter.post('/unfollow', protect, unfollow)
 userRouter.get('/getAllFollowers', protect, getAllFollowers)
 userRouter.get('/getAllFollowing', protect, getAllFollowing)
-userRouter.get('/getAllFollowersAndFollowing', protect, getAllFollowersAndFollowing)
+userRouter.post('/getAllFollowersAndFollowing', protect, getAllFollowersAndFollowing)
 export default userRouter;
