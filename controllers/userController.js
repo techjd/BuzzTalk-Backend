@@ -7,9 +7,11 @@ import {
     FAILURE,
     REQUEST_ACCEPTED,
     REQUEST_NOT_FOUND,
+    REQUEST_REJECTED,
     REQUEST_SENT,
     SUCCESS,
     USER_ALREADY_FOLLOWED,
+    USER_DISCONNECTED,
     USER_FOLLOWED,
     USER_NOT_CONNECTED,
     USER_NOT_FOLLOWED,
@@ -51,7 +53,7 @@ const getInfo = async (req, res) => {
 // @access  Private
 const getOthersInfo = async (req, res) => {
     try {
-
+        
         const { userId } = req.body;
         // console.log("WHT" + ObjectId(userId.trim()))
         // let objectId = mongoose.Types.ObjectId(userId.trim());
@@ -104,8 +106,15 @@ const follow = async (req, res) => {
     try {
         const { followeeID } = req.body;
         console.log(followeeID)
-        const user = await FollowerFollowing.findOne({"followeeId": followeeID})
-                
+        // const user = await FollowerFollowing.findOne({"followeeId": followeeID}) Old One
+        
+        const user = await FollowerFollowing.findOne({
+            $and: [
+                {"followeeId": followeeID},
+                {"followerId": req.userId}
+            ]
+        })
+        
         if (user) {
             console.log("WTH!!!")
             const failureResponse = new FailureResponse(FAILURE, USER_ALREADY_FOLLOWED, '');
@@ -117,7 +126,7 @@ const follow = async (req, res) => {
             followerId: req.userId,
             followeeId: followeeID
         })
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: USER_FOLLOWED,
@@ -137,21 +146,21 @@ const checkIfUserFollowedOrNot = async (req, res) => {
         const { followeeID } = req.body;
         console.log(followeeID)
         // const user = await FollowerFollowing.findOne({"followeeId": followeeID})
-
+        
         const user = await FollowerFollowing.findOne({
             $and: [
                 {"followeeId": followeeID},
                 {"followerId": req.userId}
             ]
         })
-
+        
         console.log(user)
         if (user) {
             const failureResponse = new FailureResponse(SUCCESS, USER_FOLLOWED, '');
             const response = failureResponse.response();
             return res.status(201).json(response);
         }
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: USER_NOT_FOLLOWED,
@@ -216,7 +225,7 @@ const getAllFollowersAndFollowing = async (req, res) => {
         // const following = await FollowerFollowing.find({ "followerId": req.userId}).populate({path: 'followeeId', select: '-password'}).populate({path: 'followerId', select: '-password', })
         const followers = await FollowerFollowing.find({ "followeeId": userId })
         const following = await FollowerFollowing.find({ "followerId": userId })
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: ALL_FOLLOWERS,
@@ -237,17 +246,17 @@ const getAllFollowersAndFollowing = async (req, res) => {
 const unfollow = async (req, res) => {
     try {
         const { followeeID } = req.body;
-
+        
         const user = await FollowerFollowing.findOne({"followeeID": followeeID})
-                
+        
         if (!user) {
             const failureResponse = new FailureResponse(FAILURE, USER_NOT_FOLLOWED, '');
             const response = failureResponse.response();
             return res.status(404).json(response);
         }
-
+        
         await FollowerFollowing.deleteOne({"followeeID": followeeID})
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: USER_UNFOLLOWED,
@@ -266,26 +275,26 @@ const connect = async(req, res) => {
     try {
         const { toId } = req.body
         console.log("Request Came", toId)
-
+        
         const records = await Connections.findOne({
             $and: [
                 {"from": req.userId},
                 {"to": toId}
             ]
         })
-
+        
         if (records) {
             const failureResponse = new FailureResponse(FAILURE, records.status, '');
             const response = failureResponse.response();
             return res.status(404).json(response);
         }
-
+        
         await Connections.create({
             from: req.userId,
             to: toId,
             status: REQUEST_SENT
         })
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: REQUEST_SENT,
@@ -309,7 +318,7 @@ const getAllConnectionsRequests = async (req, res) => {
             ]
         }).populate({path: 'from', select: '-password'})
         .populate({path: 'to', select: '-password', })
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: ALL_CONNECTIONS_REQUESTS,
@@ -329,7 +338,7 @@ const getAllConnectionsRequests = async (req, res) => {
 const acceptRequest = async (req, res) => {
     try {
         const { requestId } = req.body
-
+        
         const request = await Connections.findById(requestId);
         
         if (!request) {
@@ -337,11 +346,11 @@ const acceptRequest = async (req, res) => {
             const response = failureResponse.response();
             return res.status(404).json(response);
         }
-
+        
         request.status = REQUEST_ACCEPTED
-
+        
         await request.save()
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: REQUEST_ACCEPTED,
@@ -359,7 +368,7 @@ const acceptRequest = async (req, res) => {
 const checkIfRequestSentOrNot = async (req, res) => {
     try {
         const { toId } = req.body;
-
+        
         const user = await Connections.findOne({
             $or: [
                 {
@@ -376,20 +385,20 @@ const checkIfRequestSentOrNot = async (req, res) => {
                 }
             ]
         })
-
+        
         // const user = await Connections.findOne({
         //     $and: [
         //         {"from": req.userId},
         //         {"to": toId}
         //     ]
         // })
-
+        
         if (user) {
             const failureResponse = new FailureResponse(SUCCESS, user.status, '');
             const response = failureResponse.response();
             return res.status(201).json(response);
         }
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: USER_NOT_CONNECTED,
@@ -406,31 +415,75 @@ const checkIfRequestSentOrNot = async (req, res) => {
 // @access  Private
 const getAllConnections = async (req, res) => {
     try {
+        const { userId } = req.body
+        console.log("Request Came for Getting All Connection")
         const connections = await Connections.find({
             $and: [
-                {
+                {   
                     $or: [
-                        {
-                            "from": req.userId
-                        },
-                        {
-                            "to": req.userId
-                        }
-                    ]
+                        {from: userId,},
+                        {to: userId}
+                    ],
                 },
                 {
-                    "status": REQUEST_ACCEPTED
+                    status: REQUEST_ACCEPTED
                 }
             ]
         }).populate({path: 'from', select: '-password', })
         .populate({path: 'to', select: '-password', })
         
+        
+    //     db.Collections .find({
+            
+    //         $and: [
+    //             {
+    //             "status" :  REQUEST_ACCEPTED  
+    //             },
+    //             {
+    //                 $or: [
+    //                     {from :  userId},
+    //                     {to :  userId}
+    //                 ]
+    //             }
+    //         ]
+    // });
+    
+    console.log(connections)
+    
+    res.status(201).json({
+        status: SUCCESS,
+        message: ALL_CONNECTIONS,
+        data: {
+            connections: connections
+        }
+    });
+} catch (error) {
+    console.log(error);
+    res.status(500).json(fixedresponse);
+}
+}
+
+// @desc    Reject a user's connection
+// @route   DELETE /api/user/reject
+// @access  Private
+const reject = async(req, res) => {
+    try {
+        const { requestId } = req.body
+        
+        const request = await Connections.findById(requestId);
+        
+        if (!request) {
+            const failureResponse = new FailureResponse(FAILURE, REQUEST_NOT_FOUND, '');
+            const response = failureResponse.response();
+            return res.status(404).json(response);
+        }
+        
+        await Connections.findByIdAndDelete(requestId)
+        
         res.status(201).json({
             status: SUCCESS,
-            message: ALL_CONNECTIONS,
-            data: {
-                connections: connections
-            }
+            message: REQUEST_REJECTED,
+            data: ''
         });
     } catch (error) {
         console.log(error);
@@ -438,4 +491,33 @@ const getAllConnections = async (req, res) => {
     }
 }
 
-export { getInfo, getOthersInfo , getAllUsers, follow, getAllFollowersAndFollowing, getAllFollowers, getAllFollowing, unfollow, checkIfUserFollowedOrNot, connect, getAllConnectionsRequests, acceptRequest, checkIfRequestSentOrNot, getAllConnections };
+// @desc    Disconnect a connection
+// @route   DELETE /api/user/disconnect
+// @access  Private
+
+const disconnect = async(req, res) => {
+    try {
+        const { requestId } = req.body
+        
+        const request = await Connections.findById(requestId);
+        
+        if (!request) {
+            const failureResponse = new FailureResponse(FAILURE, REQUEST_NOT_FOUND, '');
+            const response = failureResponse.response();
+            return res.status(404).json(response);
+        }
+        
+        await Connections.findByIdAndDelete(requestId)
+        
+        res.status(201).json({
+            status: SUCCESS,
+            message: USER_DISCONNECTED,
+            data: ''
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+export { getInfo, getOthersInfo , getAllUsers, follow, getAllFollowersAndFollowing, getAllFollowers, getAllFollowing, unfollow, checkIfUserFollowedOrNot, connect, getAllConnectionsRequests, acceptRequest, checkIfRequestSentOrNot, getAllConnections, reject, disconnect };
