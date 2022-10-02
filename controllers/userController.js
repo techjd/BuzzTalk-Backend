@@ -1,18 +1,24 @@
 import FailureResponse, { fixedresponse } from '../utils/FailureResponse.js';
 import {
+    ALL_CONNECTIONS,
+    ALL_CONNECTIONS_REQUESTS,
     ALL_FOLLOWERS,
     DATA_FETCHED,
     FAILURE,
+    REQUEST_ACCEPTED,
+    REQUEST_NOT_FOUND,
+    REQUEST_SENT,
     SUCCESS,
     USER_ALREADY_FOLLOWED,
     USER_FOLLOWED,
+    USER_NOT_CONNECTED,
     USER_NOT_FOLLOWED,
     USER_NOT_FOUND,
     USER_UNFOLLOWED,
 } from '../utils/Constants.js';
 import FollowerFollowing from '../models/FollowerFollowing.js';
 import User from '../models/User.js';
-import mongoose , { ObjectId } from 'mongoose';
+import Connections from '../models/Connections.js';
 
 // @desc    Get User Information for Personal Profile
 // @route   GET /api/user/getInfo
@@ -253,7 +259,183 @@ const unfollow = async (req, res) => {
     }
 }
 
+// @desc    Connect To A User
+// @route   GET /api/user/connect
+// @access  Private
+const connect = async(req, res) => {
+    try {
+        const { toId } = req.body
+        console.log("Request Came", toId)
 
+        const records = await Connections.findOne({
+            $and: [
+                {"from": req.userId},
+                {"to": toId}
+            ]
+        })
 
+        if (records) {
+            const failureResponse = new FailureResponse(FAILURE, records.status, '');
+            const response = failureResponse.response();
+            return res.status(404).json(response);
+        }
 
-export { getInfo, getOthersInfo , getAllUsers, follow, getAllFollowersAndFollowing, getAllFollowers, getAllFollowing, unfollow, checkIfUserFollowedOrNot };
+        await Connections.create({
+            from: req.userId,
+            to: toId,
+            status: REQUEST_SENT
+        })
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: REQUEST_SENT,
+            data: ''
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+// @desc    Get All Connections Request
+// @route   GET /api/user/getAllConnectionsRequest
+// @access  Private
+const getAllConnectionsRequests = async (req, res) => {
+    try {
+        const connections = await Connections.find({ 
+            $and: [
+                {"to": req.userId},
+                {"status": REQUEST_SENT}
+            ]
+        }).populate({path: 'from', select: '-password'})
+        .populate({path: 'to', select: '-password', })
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: ALL_CONNECTIONS_REQUESTS,
+            data: {
+                requests: connections
+            }
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+// @desc    Accept A Connection Request
+// @route   PUT /api/user/acceptRequest
+// @access  Private
+const acceptRequest = async (req, res) => {
+    try {
+        const { requestId } = req.body
+
+        const request = await Connections.findById(requestId);
+        
+        if (!request) {
+            const failureResponse = new FailureResponse(FAILURE, REQUEST_NOT_FOUND, '');
+            const response = failureResponse.response();
+            return res.status(404).json(response);
+        }
+
+        request.status = REQUEST_ACCEPTED
+
+        await request.save()
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: REQUEST_ACCEPTED,
+            data: ''
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+// @desc    Check if request is sent or not
+// @route   PUT /api/user/checkIfRequestSentOrNot
+// @access  Private
+const checkIfRequestSentOrNot = async (req, res) => {
+    try {
+        const { toId } = req.body;
+
+        const user = await Connections.findOne({
+            $or: [
+                {
+                    $and: [
+                        {"from": req.userId},
+                        {"to": toId}
+                    ]       
+                },
+                {
+                    $and: [
+                        {"from": toId},
+                        {"to": req.userId}
+                    ] 
+                }
+            ]
+        })
+
+        // const user = await Connections.findOne({
+        //     $and: [
+        //         {"from": req.userId},
+        //         {"to": toId}
+        //     ]
+        // })
+
+        if (user) {
+            const failureResponse = new FailureResponse(SUCCESS, user.status, '');
+            const response = failureResponse.response();
+            return res.status(201).json(response);
+        }
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: USER_NOT_CONNECTED,
+            data: ''
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+// @desc    Get All Users Connections
+// @route   GET /api/user/getConnections
+// @access  Private
+const getAllConnections = async (req, res) => {
+    try {
+        const connections = await Connections.find({
+            $and: [
+                {
+                    $or: [
+                        {
+                            "from": req.userId
+                        },
+                        {
+                            "to": req.userId
+                        }
+                    ]
+                },
+                {
+                    "status": REQUEST_ACCEPTED
+                }
+            ]
+        }).populate({path: 'from', select: '-password', })
+        .populate({path: 'to', select: '-password', })
+        
+        res.status(201).json({
+            status: SUCCESS,
+            message: ALL_CONNECTIONS,
+            data: {
+                connections: connections
+            }
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+export { getInfo, getOthersInfo , getAllUsers, follow, getAllFollowersAndFollowing, getAllFollowers, getAllFollowing, unfollow, checkIfUserFollowedOrNot, connect, getAllConnectionsRequests, acceptRequest, checkIfRequestSentOrNot, getAllConnections };
