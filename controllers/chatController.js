@@ -2,7 +2,7 @@ import Conversations from "../models/Conversations.js";
 import OnlineUsers from "../models/OnlineUsers.js";
 import Messages from "../models/Messages.js";
 import FailureResponse, { fixedresponse } from '../utils/FailureResponse.js';
-import { ALL_CONVERSATIONS, ALL_MESSAGES, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MESSAGE_SUCCESSFULLY_SENT_WHEN_ONLINE, NEW_MESSAGE, SUCCESS, USER_ADDED_TO_ONLINE_LIST, USER_ALREADY_ONLINE, USER_NOT_FOUND_IN_ONLINE_LIST, USER_REMOVED_FROM_ONLNE_LIST } from "../utils/Constants.js";
+import { ALL_CONVERSATIONS, ALL_MESSAGES, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MESSAGE_SUCCESSFULLY_SENT_WHEN_ONLINE, NEW_MESSAGE, SUCCESS, USER_ADDED_TO_ONLINE_LIST, USER_ALREADY_ONLINE, USER_NOT_FOUND_IN_ONLINE_LIST, USER_OFFLINE, USER_ONLINE, USER_REMOVED_FROM_ONLNE_LIST } from "../utils/Constants.js";
 import mongoose from "mongoose";
 
 
@@ -18,9 +18,14 @@ const makeMeOnline = async (req, res) => {
             user: req.userId
         })
         
-        // Check if the socketId is new or not !
+        // Compare it with the old socket id !!
         
         if (isUserOnline) {
+            // console.log(req.io)
+            if (isUserOnline.socketId != socketId) {
+                isUserOnline.socketId = socketId
+            }
+            await isUserOnline.save();
             const failureResponse = new FailureResponse(SUCCESS, USER_ALREADY_ONLINE, '');
             const response = failureResponse.response();
             return res.status(201).json(response);
@@ -233,7 +238,7 @@ const getAllConversations = async (req, res) => {
             'recipientObj.date': 0,
         });
 
-        console.log(conversations)
+        // console.log(conversations)
 
         res.status(201).json({
             status: SUCCESS,
@@ -249,4 +254,33 @@ const getAllConversations = async (req, res) => {
     }
 }
 
-export { makeMeOnline, removeMeOnline, sendMessage, getAllMessages, getAllConversations }
+// @route  POST api/chat/getUserStatus
+// @desc   Get User Status whether he/she is offline or online
+// @access Private
+
+const getUserStatus = async (req, res) => {
+    try {
+        const { to } = req.body
+
+        const isUserOnline = await OnlineUsers.findOne({ user: mongoose.Types.ObjectId(to) });
+        
+        if (isUserOnline) {
+            return res.status(201).json({
+                status: SUCCESS,
+                message: USER_ONLINE,
+                data: ''
+            });
+        }
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: USER_OFFLINE,
+            data: ''
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+export { makeMeOnline, removeMeOnline, sendMessage, getAllMessages, getAllConversations, getUserStatus }

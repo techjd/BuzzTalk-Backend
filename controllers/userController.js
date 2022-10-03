@@ -448,7 +448,7 @@ const getAllConnections = async (req, res) => {
     //         ]
     // });
     
-    console.log(connections)
+    // console.log(connections)
     
     res.status(201).json({
         status: SUCCESS,
