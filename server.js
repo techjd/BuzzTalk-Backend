@@ -1,4 +1,5 @@
 import express, { json, urlencoded } from 'express';
+import morgan from "morgan"
 import connectDB from './config/db.js';
 import { SUCCESS } from './utils/constants.js';
 import http from 'http'
@@ -8,6 +9,7 @@ const httpServer = http.createServer(app);
 import { Server } from 'socket.io';
 import authRouter from './routes/authRoutes.js';
 import userRouter from './routes/userRoutes.js';
+import chatRouter from './routes/chatRoutes.js';
 const io = new Server(httpServer);
 
 config()
@@ -17,9 +19,10 @@ config()
 app.use(json());
 app.use(urlencoded({ extended: true }));
 
-
 //Connect Database
 connectDB();
+
+app.use(morgan('combined'))
 
 io.on('connection', (socket) => {
   console.log(socket.id);
@@ -34,7 +37,8 @@ app.use((req, res, next) => {
 // Define Routes
 
 app.use('/api/auth', authRouter);
-app.use('/api/user', userRouter)
+app.use('/api/user', userRouter);
+app.use('/api/chat', chatRouter);
 // app.use('/api/auth', require('./routes/api/auth'));
 // app.use('/api/posts', require('./routes/api/posts'));
 // app.use('/api/profile', require('./routes/api/profile'));
