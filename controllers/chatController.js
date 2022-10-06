@@ -118,7 +118,7 @@ const sendMessage = async(req, res) => {
         const message = await msg.save();
         
         const isUserOnline = await OnlineUsers.findOne({ user: mongoose.Types.ObjectId(to) });
-
+        
         const messageToSend = {
             status: SUCCESS,
             message: NEW_MESSAGE,
@@ -237,9 +237,9 @@ const getAllConversations = async (req, res) => {
             'recipientObj.__v': 0,
             'recipientObj.date': 0,
         });
-
+        
         // console.log(conversations)
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: ALL_CONVERSATIONS,
@@ -247,7 +247,80 @@ const getAllConversations = async (req, res) => {
                 conversations: conversations
             }
         });
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
 
+const getMessagesByDate = async (req, res) => {
+    try {
+        const { to } = req.body;
+        console.log("Request")
+        const messages = await Messages.aggregate([
+            {
+                $project:
+                {
+                    month: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                }
+            },
+            {
+                $group: {
+                    _id: { 
+                        month: { $month: "$month" },
+                        day: { $dayOfMonth: "$month" },
+                        year: { $year: "$month" }
+                    },
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'to',
+                    foreignField: '_id',
+                    as: 'toObj',
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'from',
+                    foreignField: '_id',
+                    as: 'fromObj',
+                },
+            },
+        ])
+        .match({
+            $or: [
+                {
+                    $and: [
+                        { to: mongoose.Types.ObjectId(to) },
+                        { from: mongoose.Types.ObjectId(req.userId) },
+                    ],
+                },
+                {
+                    $and: [
+                        { to: mongoose.Types.ObjectId(req.userId) },
+                        { from: mongoose.Types.ObjectId(to) },
+                    ],
+                },
+            ],
+        })
+        .project({
+            'toObj.password': 0,
+            'toObj.__v': 0,
+            'fromObj.password': 0,
+            'fromObj.__v': 0,
+        });
+        
+        res.status(201).json({
+            status: SUCCESS,
+            message: ALL_MESSAGES,
+            data: {
+                messages: messages
+            }
+        });
     } catch (error) {
         console.log(error);
         res.status(500).json(fixedresponse);
@@ -261,7 +334,7 @@ const getAllConversations = async (req, res) => {
 const getUserStatus = async (req, res) => {
     try {
         const { to } = req.body
-
+        
         const isUserOnline = await OnlineUsers.findOne({ user: mongoose.Types.ObjectId(to) });
         
         if (isUserOnline) {
@@ -271,16 +344,16 @@ const getUserStatus = async (req, res) => {
                 data: ''
             });
         }
-
+        
         res.status(201).json({
             status: SUCCESS,
             message: USER_OFFLINE,
             data: ''
         });
-
+        
     } catch (error) {
         console.log(error);
         res.status(500).json(fixedresponse);
     }
 }
-export { makeMeOnline, removeMeOnline, sendMessage, getAllMessages, getAllConversations, getUserStatus }
+export { makeMeOnline, removeMeOnline, sendMessage, getAllMessages, getAllConversations, getUserStatus, getMessagesByDate }

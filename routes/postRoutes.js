@@ -1,9 +1,14 @@
 import express from 'express';
 import { login, register } from '../controllers/authController.js';
-const authRouter = express.Router();
+import { addPost, getAllSpecificUsersPosts, getFeed } from '../controllers/postController.js';
+import protect from '../middlewares/protect.js';
+const postRouter = express.Router();
 
-authRouter.post('/post', login);
-authRouter.get('/post/:id', register);
-authRouter.put('/post/like/:id', );
-authRouter.get('/post/')
-export default authRouter;
+postRouter.post('/addPost', protect, addPost);
+postRouter.get('/getAllSpecificUserPosts', getAllSpecificUsersPosts)
+postRouter.get('/getFeed',protect, getFeed)
+// authRouter.post('/post/:id', protect);
+// authRouter.put('/post/like/:id', protect);
+// authRouter.get('/post/dislike/:id', protect)
+
+export default postRouter;

@@ -3,8 +3,11 @@ import {
     ALL_CONNECTIONS,
     ALL_CONNECTIONS_REQUESTS,
     ALL_FOLLOWERS,
+    ALL_FOLLOWING,
+    ALL_USER_NAMES,
     DATA_FETCHED,
     FAILURE,
+    NOTI_TOKEN_ADDED,
     REQUEST_ACCEPTED,
     REQUEST_NOT_FOUND,
     REQUEST_REJECTED,
@@ -21,6 +24,7 @@ import {
 import FollowerFollowing from '../models/FollowerFollowing.js';
 import User from '../models/User.js';
 import Connections from '../models/Connections.js';
+import Notifications from '../models/Notification.js';
 
 // @desc    Get User Information for Personal Profile
 // @route   GET /api/user/getInfo
@@ -29,6 +33,15 @@ const getInfo = async (req, res) => {
     try {
         const user = await User.findById(req.userId).select('-password')
         
+        console.log(typeof user.bio)
+        console.log(user.bio)
+
+        if(user.bio) {
+            console.log("User has bio")
+        } else{
+            console.log("User has no bio")
+        }
+
         if (!user) {
             const failureResponse = new FailureResponse(FAILURE, USER_NOT_FOUND, '');
             const response = failureResponse.response();
@@ -177,7 +190,11 @@ const checkIfUserFollowedOrNot = async (req, res) => {
 // @access  Private
 const getAllFollowers = async (req, res) => {
     try {
-        const followers = await FollowerFollowing.find({ "followeeId": req.userId })
+
+        const { followeeId } = req.body
+
+        const followers = await FollowerFollowing.find({ "followeeId": followeeId })
+            .populate({path: 'followerId', select: '-password -notificationId', })
         
         res.status(201).json({
             status: SUCCESS,
@@ -197,11 +214,15 @@ const getAllFollowers = async (req, res) => {
 // @access  Private
 const getAllFollowing = async (req, res) => {
     try {
-        const following = await FollowerFollowing.find({"followerId": req.userId}).populate({path: 'followerId', select: '-password', })
+
+        const { followerId } = req.body
+        console.log(followerId)
+        const following = await FollowerFollowing.find({"followerId": followerId})
+            .populate({path: 'followeeId', select: '-password -notificationId', })
         console.log("this is called")
         res.status(201).json({
             status: SUCCESS,
-            message: ALL_FOLLOWERS,
+            message: ALL_FOLLOWING,
             data: {
                 following: following
             }
@@ -520,4 +541,75 @@ const disconnect = async(req, res) => {
     }
 }
 
-export { getInfo, getOthersInfo , getAllUsers, follow, getAllFollowersAndFollowing, getAllFollowers, getAllFollowing, unfollow, checkIfUserFollowedOrNot, connect, getAllConnectionsRequests, acceptRequest, checkIfRequestSentOrNot, getAllConnections, reject, disconnect };
+// @desc    Send NotificationToken
+// @route   POST /api/user/sendNotiToken
+// @access  Private
+
+const sendNotiToken = async (req, res) => {
+    try {
+        const { notificationToken } = req.body
+
+        const user = await User.findById(req.userId)
+
+        user.notificationId = notificationToken
+
+        await user.save();
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: NOTI_TOKEN_ADDED,
+            data: ''
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+// @desc    Get UserNames
+// @route   POST /api/user/getUsernames
+// @access  Private
+
+const getUserName = async (req, res) => {
+    try {
+
+        console.log("Request")
+
+        const users = await User.find().select('-password -notificationId')
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: ALL_USER_NAMES,
+            data: {
+                usernames: users
+            }
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+
+// @desc    Get Notifications
+// @route   POST /api/user/getNotifications
+// @access  Private
+
+const getNotifications = async (req, res) => {
+    try {
+        const notifications = await Notifications.find({ userId: req.userId })
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: NOTI_TOKEN_ADDED,
+            data: ''
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+
+export { getInfo, getOthersInfo , getAllUsers, follow, getAllFollowersAndFollowing, getAllFollowers, getAllFollowing, unfollow, checkIfUserFollowedOrNot, connect, getAllConnectionsRequests, acceptRequest, checkIfRequestSentOrNot, getAllConnections, reject, disconnect, sendNotiToken, getUserName };

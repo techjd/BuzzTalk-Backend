@@ -2,6 +2,13 @@ import mongoose from 'mongoose';
 
 const UserSchema = new mongoose.Schema(
   {
+    userName: {
+      type: String,
+      required: true
+    },
+    notificationId: {
+      type: String
+    },
     firstName: {
       type: String,
       required: true,
