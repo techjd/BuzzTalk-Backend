@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { PROFESSIONAL_USERS, PROFESSORS, RESEARCH_SCHOLARS, STUDENTS } from '../utils/Constants.js';
 
 const UserSchema = new mongoose.Schema(
   {
@@ -25,6 +26,16 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    userType: {
+      type: String,
+      enum : [
+        PROFESSORS,
+        STUDENTS,
+        PROFESSIONAL_USERS,
+        RESEARCH_SCHOLARS
+      ],
+      required: true
+    }
   },
   {
     timestamps: true,

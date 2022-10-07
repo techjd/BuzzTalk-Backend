@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from "dotenv"
 import FailureResponse, { fixedresponse } from '../utils/FailureResponse.js';
 import {
+  COMPANY_NOT_FOUND,
   FAILURE,
   INVALID_PASSWORD,
   LOGIN_SUCCESSFUL,
@@ -12,6 +13,9 @@ import {
   USER_ALEADY_EXISTS,
   USER_NOT_FOUND,
 } from '../utils/Constants.js';
+import c from 'config';
+import Companies from '../models/Company.js';
+import Universities from '../models/University.js';
 dotenv.config()
 const KEY = process.env.secret_key;
 
@@ -65,13 +69,106 @@ const login = async (req, res) => {
   }
 };
 
+const loginCompany = async (req, res) => {
+  try {
+    const { companyEmail, companyPassword } = req.body;
+
+    const existingCompany = await Companies.findOne({ companyEmail: companyEmail });
+
+    if (!existingCompany) {
+      const failureResponse = new FailureResponse(FAILURE, COMPANY_NOT_FOUND, '');
+      const response = failureResponse.response();
+      return res.status(404).json(response);
+    }
+
+    const matchedPassword = await bcrypt.compare(
+      companyPassword,
+      existingCompany.companyPassword
+    );
+
+    if (!matchedPassword) {
+      const failureResponse = new FailureResponse(
+        FAILURE,
+        INVALID_PASSWORD,
+        ''
+      );
+      const response = failureResponse.response();
+      return res.status(401).json(response);
+    }
+
+    const token = jwt.sign(
+      { email: existingCompany.companyEmail, id: existingCompany._id },
+      KEY
+    );
+
+    // console.log(email + password);
+    res.status(201).json({
+      status: SUCCESS,
+      message: LOGIN_SUCCESSFUL,
+      data: {
+        user: existingCompany,
+        token: token,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json(fixedresponse);
+  }
+};
+const loginUniversity = async (req, res) => {
+  try {
+    const { universityEmail, universityPassword } = req.body;
+
+    const existingUniversities = await Universities.findOne({ universityEmail: universityEmail });
+
+    if (!existingUniversities) {
+      const failureResponse = new FailureResponse(FAILURE, COMPANY_NOT_FOUND, '');
+      const response = failureResponse.response();
+      return res.status(404).json(response);
+    }
+
+    const matchedPassword = await bcrypt.compare(
+      universityPassword,
+      existingUniversities.universityPassword
+    );
+
+    if (!matchedPassword) {
+      const failureResponse = new FailureResponse(
+        FAILURE,
+        INVALID_PASSWORD,
+        ''
+      );
+      const response = failureResponse.response();
+      return res.status(401).json(response);
+    }
+
+    const token = jwt.sign(
+      { email: existingUniversities.universityEmail, id: existingUniversities._id },
+      KEY
+    );
+
+    // console.log(email + password);
+    res.status(201).json({
+      status: SUCCESS,
+      message: LOGIN_SUCCESSFUL,
+      data: {
+        user: existingUniversities,
+        token: token,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json(fixedresponse);
+  }
+};
+
 // @desc    Register as a User/Entrepreneur
 // @route   POST /api/auth/register
 // @access  Public
 const register = async (req, res) => {
   try {
     console.log(process.env.secret_key);
-    const { firstName, lastName, email, password, userName } = req.body;
+    const { firstName, lastName, email, password, userName, userType } = req.body;
     console.log(firstName, lastName, email, password);
     const existingUser = await User.findOne({ email: email });
 
@@ -93,6 +190,7 @@ const register = async (req, res) => {
       lastName: lastName,
       email: email,
       password: hashedPassword,
+      userType: userType
     });
 
     const token = jwt.sign({ email: result.email, id: result._id }, KEY);
@@ -111,4 +209,4 @@ const register = async (req, res) => {
   }
 };
 
-export { login, register };
+export { login, register, loginCompany ,loginUniversity };
