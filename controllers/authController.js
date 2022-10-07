@@ -71,7 +71,7 @@ const login = async (req, res) => {
 const register = async (req, res) => {
   try {
     console.log(process.env.secret_key);
-    const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, password, userName } = req.body;
     console.log(firstName, lastName, email, password);
     const existingUser = await User.findOne({ email: email });
 
@@ -88,6 +88,7 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const result = await User.create({
+      userName: userName,
       firstName: firstName,
       lastName: lastName,
       email: email,

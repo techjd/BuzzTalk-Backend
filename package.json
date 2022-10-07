@@ -4,9 +4,12 @@
   "description": "Backend for the buzztalk app",
   "main": "server.js",
   "type": "module",
+  "engines": {
+    "node": "12.x"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server",
+    "server": "nodemon server"
   },
   "keywords": [
     "social-media"

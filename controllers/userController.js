@@ -268,15 +268,26 @@ const unfollow = async (req, res) => {
     try {
         const { followeeID } = req.body;
         
-        const user = await FollowerFollowing.findOne({"followeeID": followeeID})
-        
+        const user = await FollowerFollowing.findOne(
+            {
+                $and: [
+                    {"followeeId": followeeID},
+                    {"followerId": req.userId}
+                ]
+            })
+
         if (!user) {
             const failureResponse = new FailureResponse(FAILURE, USER_NOT_FOLLOWED, '');
             const response = failureResponse.response();
             return res.status(404).json(response);
         }
         
-        await FollowerFollowing.deleteOne({"followeeID": followeeID})
+        await FollowerFollowing.deleteOne({
+            $and: [
+                {"followeeId": followeeID},
+                {"followerId": req.userId}
+            ]
+        })
         
         res.status(201).json({
             status: SUCCESS,
