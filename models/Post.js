@@ -11,11 +11,22 @@ const PostSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        title: {
+            type: String,
+            required: true
+        },
+        postsFor: [ {
+                type: String,
+                required: true
+            }
+        ],
         likes: {
-            type: Number
+            type: Number,
+            default: 0
         },
         comments: {
             type: Number,
+            default: 0
         }
     },
     {

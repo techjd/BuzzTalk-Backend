@@ -141,6 +141,35 @@ const addPost = async (req, res) => {
     }
 }
 
+// @route  POST api/post/newAddPost
+// @desc   Add A New Post to Platform
+// @access Private
+
+const newAddPost = async (req, res) => {
+    try {
+        const { title, content, postsFor } = req.body
+        
+        const post = new Posts({
+            userId: req.userId,
+            content: content,
+            postsFor: postsFor,
+            title: title
+        })
+
+        await post.save()
+
+        res.status(201).json({
+            status: SUCCESS,
+            message: POSTADDED,
+            data: ''
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+
 // @route  POST api/post/:id
 // @desc   Get An Individual Post
 // @access Private
