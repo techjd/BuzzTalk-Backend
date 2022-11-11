@@ -3,7 +3,7 @@ import FollowerFollowing from '../models/FollowerFollowing.js';
 import HashTagsFeed from '../models/HashTagFeed.js';
 import HashTags from '../models/Hashtags.js';
 import Posts from '../models/Post.js';
-import { FEED, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, POSTADDED, POSTED, SINGLE_POST, SUCCESS, TAGGED } from '../utils/Constants.js';
+import { FEED, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, NEW_FEED, POSTADDED, POSTED, SINGLE_POST, SUCCESS, TAGGED } from '../utils/Constants.js';
 import FailureResponse, { fixedresponse } from '../utils/FailureResponse.js';
 const fcm_server_key = process.env.firebase_fcm_server_key
 import { initializeApp } from 'firebase-admin/app';
@@ -12,6 +12,11 @@ const app = initializeApp()
 import FCM from "fcm-node"
 import Notifications from '../models/Notification.js';
 import User from '../models/User.js';
+import Universities from '../models/University.js';
+import Opportunities from '../models/OpportunitiesByCompany.js';
+import OpportunitiesByCompany from '../models/OpportunitiesByCompany.js';
+import NewFeed from '../models/NewFeed.js';
+import OpportunitiesByUniversity from '../models/OpportunitiesByUniversity.js';
 // var FCM = require('fcm-node');
 var serverKey = process.env.firebase_fcm_server_key; //put your server key here
 var fcm = new FCM(serverKey);
@@ -281,6 +286,38 @@ const getFeed = async (req, res) => {
     }
 }
 
+// @route  POST api/post/getFeed
+// @desc   Get Feed For A User
+// @access Private
+
+const getNewFeed = async (req, res) => {
+    try {
+        const feed = await NewFeed.find({ userId: req.userId })
+        .populate(
+            {   
+                path: 'postedByCompany',
+            }
+            ).populate({
+                path: 'postedByUniversity',
+            })
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: NEW_FEED,
+            data: {
+                feed: feed
+            }
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+// Get info about company
+
+
+
 // @route  POST api/post/like/:id
 // @desc   Like a Post
 // @access Private
@@ -386,4 +423,100 @@ const getAllPostsofHashTags = async (req, res) => {
 }
 
 
-export { addPost, getSinglePost, getAllSpecificUsersPosts, getFeed }
+// Post new opportunities by company
+
+const postNewOpportunitiesCompany = async (req, res) => {
+    try {
+        const { postTitle, postContent, to } = req.body;
+
+        console.log(typeof to)
+        console.log(to)
+
+        console.log(req.userId)
+
+        const opportunity = new OpportunitiesByCompany({
+            postTitle: postTitle,
+            postContent: postContent,
+            to: to,
+            companyId: req.userId
+        })
+        
+        await opportunity.save()
+
+        for(const user of to) {
+            console.log(user)
+            const users = await User.find({ userType: user })
+
+            if(users) {
+                for(const u of users) {
+
+                    console.log(opportunity.companyId)
+
+                    const feed = new NewFeed({
+                        feedTitle: postTitle,
+                        feedContent: postContent,
+                        postedByCompany: opportunity.companyId,
+                        userId: u.id
+                    })
+
+                    await feed.save()
+                }
+            }
+        }
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: POSTED,
+            data: ''
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+
+const postNewOpportunitiesUniversity = async(req, res) => {
+    try {
+        const { postTitle, postContent, to } = req.body;
+
+        console.log(req.userId)
+
+        const opportunity = new OpportunitiesByUniversity({
+            postTitle: postTitle,
+            postContent: postContent,
+            to: to,
+            universityId: req.userId
+        })
+        
+        await opportunity.save()
+
+        for(const user of to) {
+            console.log(user)
+            const users = await User.find({ userType: user })
+
+            if(users) {
+                for(const u of users) {
+                    const feed = new NewFeed({
+                        feedTitle: postTitle,
+                        feedContent: postContent,
+                        postedByUniversity: opportunity.universityId,
+                        userId: u.id
+                    })
+
+                    await feed.save()
+                }
+            }
+        }
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: POSTED,
+            data: ''
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+export { addPost, getSinglePost, getAllSpecificUsersPosts, getFeed, getNewFeed, postNewOpportunitiesCompany, postNewOpportunitiesUniversity }
