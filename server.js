@@ -13,6 +13,7 @@ import chatRouter from './routes/chatRoutes.js';
 import postRouter from './routes/postRoutes.js';
 import companyRouter from './routes/companyRoutes.js';
 import universityRouter from './routes/universityRoutes.js';
+import imageRouter from './routes/imageRoutes.js';
 const io = new Server(httpServer);
 
 config()
@@ -117,13 +118,13 @@ app.use('/api/chat', chatRouter);
 app.use('/api/post', postRouter);
 app.use('/api/company', companyRouter);
 app.use('/api/university', universityRouter)
+app.use('/api/testImage', imageRouter)
 // app.use('/api/auth', require('./routes/api/auth'));
 // app.use('/api/posts', require('./routes/api/posts'));
 // app.use('/api/profile', require('./routes/api/profile'));
 // app.use('/api/chat', require('./routes/api/chat'));
 // app.use('/api/jobs', require('./routes/api/jobs'));
 // app.use('/api/notifications', require('./routes/api/notifications'));
-
 
 const PORT = process.env.PORT || 5500;
 

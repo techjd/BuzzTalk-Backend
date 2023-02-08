@@ -3,7 +3,7 @@ import FollowerFollowing from '../models/FollowerFollowing.js';
 import HashTagsFeed from '../models/HashTagFeed.js';
 import HashTags from '../models/Hashtags.js';
 import Posts from '../models/Post.js';
-import { FEED, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, NEW_FEED, POSTADDED, POSTED, SINGLE_POST, SUCCESS, TAGGED } from '../utils/Constants.js';
+import { FEED, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MY_FEED, NEW_FEED, POSTADDED, POSTED, SINGLE_POST, SUCCESS, TAGGED } from '../utils/Constants.js';
 import FailureResponse, { fixedresponse } from '../utils/FailureResponse.js';
 const fcm_server_key = process.env.firebase_fcm_server_key
 import { initializeApp } from 'firebase-admin/app';
@@ -316,6 +316,28 @@ const getNewFeed = async (req, res) => {
 
 // Get info about company
 
+// @route  GET api/post/getMyFeed
+// @desc   Get a user's feed
+// @access Private
+const getMyFeed = async(req, res) => {
+    try {
+        const myposts = await Posts.find({ userId: req.userId }).populate({ 
+            path: 'userId', 
+            select: '-password -notificationId' 
+        })
+
+        return res.status(202).json({
+            status: SUCCESS,
+            message: MY_FEED,
+            data: {
+                feed: myposts
+            }
+        })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
 
 
 // @route  POST api/post/like/:id
@@ -519,4 +541,13 @@ const postNewOpportunitiesUniversity = async(req, res) => {
         res.status(500).json(fixedresponse);
     }
 }
-export { addPost, getSinglePost, getAllSpecificUsersPosts, getFeed, getNewFeed, postNewOpportunitiesCompany, postNewOpportunitiesUniversity }
+export { 
+    addPost, 
+    getSinglePost, 
+    getAllSpecificUsersPosts, 
+    getFeed, 
+    getNewFeed, 
+    postNewOpportunitiesCompany, 
+    postNewOpportunitiesUniversity,
+    getMyFeed
+}

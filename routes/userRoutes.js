@@ -1,5 +1,5 @@
 import express from 'express';
-import { acceptRequest, checkIfRequestSentOrNot, checkIfUserFollowedOrNot, connect, disconnect, follow, getAllConnections, getAllConnectionsRequests, getAllFollowers, getAllFollowersAndFollowing, getAllFollowing, getAllUsers, getInfo, getOthersInfo, getUserName, reject, sendNotiToken, unfollow } from '../controllers/userController.js';
+import { acceptRequest, checkIfRequestSentOrNot, checkIfUserFollowedOrNot, connect, disconnect, follow, getAllConnections, getAllConnectionsRequests, getAllFollowers, getAllFollowersAndFollowing, getAllFollowing, getAllUsers, getInfo, getNotifications, getOthersInfo, getUserName, reject, sendNotiToken, unfollow } from '../controllers/userController.js';
 import protect from '../middlewares/protect.js';
 const userRouter = express.Router();
 
@@ -24,6 +24,7 @@ userRouter.post('/getAllConnections', protect, getAllConnections)
 
 // For Notification
 userRouter.post('/sendNotiToken', protect, sendNotiToken)
+userRouter.get('/getNotifications', protect, getNotifications)
 
 userRouter.get('/getUserNames', protect, getUserName)
 

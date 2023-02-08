@@ -7,6 +7,7 @@ import {
     ALL_USER_NAMES,
     DATA_FETCHED,
     FAILURE,
+    GET_NOTIFICATION,
     NOTI_TOKEN_ADDED,
     REQUEST_ACCEPTED,
     REQUEST_NOT_FOUND,
@@ -606,15 +607,22 @@ const getUserName = async (req, res) => {
 // @desc    Get Notifications
 // @route   POST /api/user/getNotifications
 // @access  Private
-
 const getNotifications = async (req, res) => {
     try {
-        const notifications = await Notifications.find({ userId: req.userId })
+        const notifications = await Notifications
+        .find({ userId: req.userId })
+        .populate({ 
+            path: "postId",
+            populate: {
+                path: "userId",
+                select: '-password -notificationId'
+            }
+        })
 
         res.status(201).json({
             status: SUCCESS,
-            message: NOTI_TOKEN_ADDED,
-            data: ''
+            message: GET_NOTIFICATION,
+            data: notifications
         });
     } catch (error) {
         console.log(error);
@@ -623,4 +631,24 @@ const getNotifications = async (req, res) => {
 }
 
 
-export { getInfo, getOthersInfo , getAllUsers, follow, getAllFollowersAndFollowing, getAllFollowers, getAllFollowing, unfollow, checkIfUserFollowedOrNot, connect, getAllConnectionsRequests, acceptRequest, checkIfRequestSentOrNot, getAllConnections, reject, disconnect, sendNotiToken, getUserName };
+export { 
+    getInfo,
+    getOthersInfo , 
+    getAllUsers, 
+    follow, 
+    getAllFollowersAndFollowing, 
+    getAllFollowers, 
+    getAllFollowing, 
+    unfollow, 
+    checkIfUserFollowedOrNot, 
+    connect, 
+    getAllConnectionsRequests, 
+    acceptRequest, 
+    checkIfRequestSentOrNot, 
+    getAllConnections, 
+    reject, 
+    disconnect, 
+    sendNotiToken, 
+    getUserName,
+    getNotifications
+};
