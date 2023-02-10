@@ -2,8 +2,12 @@ import Conversations from "../models/Conversations.js";
 import OnlineUsers from "../models/OnlineUsers.js";
 import Messages from "../models/Messages.js";
 import FailureResponse, { fixedresponse } from '../utils/FailureResponse.js';
-import { ALL_CONVERSATIONS, ALL_MESSAGES, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MESSAGE_SUCCESSFULLY_SENT_WHEN_ONLINE, NEW_MESSAGE, SUCCESS, USER_ADDED_TO_ONLINE_LIST, USER_ALREADY_ONLINE, USER_NOT_FOUND_IN_ONLINE_LIST, USER_OFFLINE, USER_ONLINE, USER_REMOVED_FROM_ONLNE_LIST } from "../utils/Constants.js";
+import { ALL_CONVERSATIONS, ALL_MESSAGES, GET_ALL_USER_GROUPS, GROUP_CREATED_SUCCESSFULLY, GROUP_MESSAGE_SENT, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MESSAGE_SUCCESSFULLY_SENT_WHEN_ONLINE, NEW_MESSAGE, SUCCESS, USER_ADDED_TO_ONLINE_LIST, USER_ALREADY_ONLINE, USER_NOT_FOUND_IN_ONLINE_LIST, USER_OFFLINE, USER_ONLINE, USER_REMOVED_FROM_ONLNE_LIST } from "../utils/Constants.js";
 import mongoose from "mongoose";
+import Groups from "../models/Groups.js";
+import GroupMembers from "../models/GroupMembers.js";
+import GroupMessages from "../models/GroupMessages.js";
+import User from "../models/User.js";
 
 
 // @route  POST api/chat/makeMeOnline
@@ -37,7 +41,17 @@ const makeMeOnline = async (req, res) => {
         });
         
         await newOnlineUser.save();
-        
+
+        const user = await User.findById(req.userId)
+
+        const groups = await GroupMembers.find({ userId: req.userId })
+
+        if(groups) {
+            for(const group in groups) {
+                req.socket.join(group.id)
+            }
+        }
+
         res.status(201).json({
             status: SUCCESS,
             message: USER_ADDED_TO_ONLINE_LIST,
@@ -65,6 +79,14 @@ const removeMeOnline = async (req, res) => {
                 message: USER_REMOVED_FROM_ONLNE_LIST,
                 data: ''
             });
+        }
+
+        const groups = await GroupMembers.find({ userId: req.userId })
+
+        if(groups) {
+            for(const group in groups) {
+                req.socket.leave(group.id)
+            }
         }
         
         res.status(201).json({
@@ -356,4 +378,164 @@ const getUserStatus = async (req, res) => {
         res.status(500).json(fixedresponse);
     }
 }
-export { makeMeOnline, removeMeOnline, sendMessage, getAllMessages, getAllConversations, getUserStatus, getMessagesByDate }
+
+// @route  POST api/chat/createGroup
+// @desc   Create A New Group
+// @access Private
+
+const createGroup = async(req, res) => {
+    try {
+        const { groupName, groupImage, groupBio, groupUsers } = req.body
+
+        const newGroup = new Groups({
+            groupName: groupName,
+            groupImage: groupImage,
+            groupBio: groupBio,
+            lastMessage: "",
+            createdBy: req.userId
+        })
+
+        const group = await newGroup.save();
+
+        for(const users of groupUsers) {
+            const grpUser = new GroupMembers({
+                groupId: group.id,
+                userId: users
+            })
+
+            await grpUser.save()
+        }
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: GROUP_CREATED_SUCCESSFULLY,
+            data: {
+                group: group
+            }
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json(fixedresponse)
+    }
+} 
+
+// @route  POST api/chat/getGroups
+// @desc   Get Groups of Current Users
+// @access Private
+
+const getUserGroups = async(req, res) => {
+    try {
+        const groups = await GroupMembers
+        .find({ userId: req.userId })
+        .populate({
+            path: "groupId"
+        })
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: GET_ALL_USER_GROUPS,
+            data: {
+                allGroups: groups
+            }
+        })
+
+    } catch (error) {
+        console.error(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+
+// @route  POST api/chat/groups/sendMessage
+// @desc   Send Message To a Group
+// @access Private
+
+const sendMessageToGroup = async(req , res) => {
+    try {
+        const { message, anotherMessageId } = req.body
+
+        const groupId = req.params.groupId
+
+        const grp = await Groups.findById(groupId)
+        
+        const filter = {
+            groupName: grp.groupName
+        }
+
+        const update = {
+            lastMessage: message
+        }
+
+        await Groups.findOneAndUpdate(filter, update)
+        
+        let grpMsg;
+        let messageToSend;
+
+        if(anotherMessageId) {
+            grpMsg = new GroupMessages({
+                message: message,
+                anotherMessageId: anotherMessageId
+            })
+
+            messageToSend = {
+                status: SUCCESS,
+                message: NEW_MESSAGE,
+                data: {
+                    content: message,
+                    anotherMessageId: anotherMessageId
+                }
+            }
+        } else {
+            grpMsg = new GroupMessages({
+                message: message
+            })
+
+            messageToSend = {
+                status: SUCCESS,
+                message: NEW_MESSAGE,
+                data: {
+                    content: message,
+                }
+            }
+        }
+
+        await grpMsg.save()
+
+        req.io.in(grp.id).emit(NEW_MESSAGE, messageToSend)
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: GROUP_MESSAGE_SENT,
+            data: ''
+        })
+
+    } catch (error) {
+        console.error(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+
+// @route  POST api/chat/groups/getAllMessages
+// @desc   Get Messages of a Group
+// @access Private
+
+const getGroupMessages = async(req, res) => {
+    try {
+        
+    } catch (error) {
+        console.error(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+export { 
+    makeMeOnline, 
+    removeMeOnline, 
+    sendMessage, 
+    getAllMessages, 
+    getAllConversations, 
+    getUserStatus, 
+    getMessagesByDate,
+    createGroup,
+    getUserGroups,
+    sendMessageToGroup,
+    getGroupMessages
+}

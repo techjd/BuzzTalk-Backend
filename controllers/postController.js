@@ -3,7 +3,7 @@ import FollowerFollowing from '../models/FollowerFollowing.js';
 import HashTagsFeed from '../models/HashTagFeed.js';
 import HashTags from '../models/Hashtags.js';
 import Posts from '../models/Post.js';
-import { FEED, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MY_FEED, NEW_FEED, POSTADDED, POSTED, SINGLE_POST, SUCCESS, TAGGED } from '../utils/Constants.js';
+import { COMMENT, COMMENTED, FEED, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MY_FEED, NEW_FEED, POSTADDED, POSTED, SINGLE_POST, SUCCESS, TAGGED } from '../utils/Constants.js';
 import FailureResponse, { fixedresponse } from '../utils/FailureResponse.js';
 const fcm_server_key = process.env.firebase_fcm_server_key
 import { initializeApp } from 'firebase-admin/app';
@@ -17,6 +17,7 @@ import Opportunities from '../models/OpportunitiesByCompany.js';
 import OpportunitiesByCompany from '../models/OpportunitiesByCompany.js';
 import NewFeed from '../models/NewFeed.js';
 import OpportunitiesByUniversity from '../models/OpportunitiesByUniversity.js';
+import Comments from '../models/Comments.js';
 // var FCM = require('fcm-node');
 var serverKey = process.env.firebase_fcm_server_key; //put your server key here
 var fcm = new FCM(serverKey);
@@ -183,6 +184,10 @@ const getSinglePost = async (req, res) => {
     try {
         
         const post = await Posts.findById(req.params.id)
+        .populate({
+            path: "userId",
+            select: "-notificationId -password"
+        })
         
         res.status(201).json({
             status: SUCCESS,
@@ -541,6 +546,96 @@ const postNewOpportunitiesUniversity = async(req, res) => {
         res.status(500).json(fixedresponse);
     }
 }
+
+// @route  POST api/post/comment
+// @desc   Add A New Comment to the post
+// @access Private
+const commentOnPost = async(req, res) => {
+    try {
+        const { content, postId } = req.body
+        
+        const post = await Posts.findById(postId)
+            .populate({
+                path: "userId",
+                select: "-notificationId -password"
+            })
+
+        let user = await User.findOne({ userName: post.userId.userName })
+
+        if(user) {
+            const comment = new Comments({
+                userId: req.userId,
+                postId: postId,
+                content: content
+            })
+
+            await comment.save()
+
+            // LIKED , COMMENTED OR TAGGED
+            const notification = new Notifications({
+                userId: user.id, //Enter user id of other user over here,
+                text: COMMENTED,
+                postId: postId 
+            }) 
+
+            await notification.save()
+        }
+
+        if(user.notificationId) {
+            const message = {
+                to: user.notificationId,
+                collapse_key: "collapse",
+    
+                notification: {
+                  title: "Buzz Talk",
+                  body: `${user.firstName} ${user.lastName} commented on your post`
+                },
+              };
+            
+            fcm.send(message, function (err, messageID) {
+                if (err) {
+                  console.log(err);
+                  console.log("Something has gone wrong!");
+                } else {
+                  console.log("Sent with message ID: ", messageID);
+                }
+            });
+        }
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: COMMENTED,
+            data: ''
+        })
+
+    } catch (error) {
+        console.error(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+
+// @route  POST api/post/getComments/:postId
+// @desc   Get Comments of a Post
+// @access Private
+const getComments = async(req, res) => {
+    try {
+        const postId = req.params.postId 
+        const comments = await Comments.find({ postId: postId }).populate({
+            path: "userId",
+            select: "-notificationId -password"
+        })
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: COMMENT,
+            data: comments
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+
 export { 
     addPost, 
     getSinglePost, 
@@ -549,5 +644,7 @@ export {
     getNewFeed, 
     postNewOpportunitiesCompany, 
     postNewOpportunitiesUniversity,
-    getMyFeed
+    getMyFeed,
+    commentOnPost,
+    getComments
 }

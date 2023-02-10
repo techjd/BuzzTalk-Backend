@@ -1,14 +1,11 @@
 import mongoose, { Schema } from "mongoose";
 
-const PostSchema = new mongoose.Schema(
+const OrganizationPostSchema = new mongoose.Schema(
     {
-        userId: {
+        organizationId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'users'
-        },
-        orgId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'organizations'
+            ref: 'organizations',
+            required: true
         },
         content: {
             type: String,
@@ -37,5 +34,5 @@ const PostSchema = new mongoose.Schema(
     }
 )
 
-const Posts = mongoose.model('posts', PostSchema)
+const OrganizationPost = mongoose.model('organizationposts', OrganizationPostSchema)
 export default Posts

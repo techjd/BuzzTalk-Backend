@@ -14,6 +14,7 @@ import postRouter from './routes/postRoutes.js';
 import companyRouter from './routes/companyRoutes.js';
 import universityRouter from './routes/universityRoutes.js';
 import imageRouter from './routes/imageRoutes.js';
+import orgRouter from './routes/organizationRoutes.js';
 const io = new Server(httpServer);
 
 config()
@@ -31,7 +32,6 @@ app.use(morgan('combined'))
 io.on('connection', (socket) => {
   console.log(socket.id);
   app.set('socket', socket);
-
   // // convenience function to log server messages on the client
   // function log() {
   //   var array = ['Message from server:'];
@@ -107,6 +107,7 @@ io.on('connection', (socket) => {
 
 app.use((req, res, next) => {
   req.io = io;
+  req.app = app
   return next();
 });
 
@@ -119,6 +120,7 @@ app.use('/api/post', postRouter);
 app.use('/api/company', companyRouter);
 app.use('/api/university', universityRouter)
 app.use('/api/testImage', imageRouter)
+app.use('/api/org', orgRouter)
 // app.use('/api/auth', require('./routes/api/auth'));
 // app.use('/api/posts', require('./routes/api/posts'));
 // app.use('/api/profile', require('./routes/api/profile'));

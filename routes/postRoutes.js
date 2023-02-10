@@ -1,6 +1,6 @@
 import express from 'express';
 import { login, register } from '../controllers/authController.js';
-import { addPost, getAllSpecificUsersPosts, getFeed, getMyFeed, getNewFeed, postNewOpportunitiesCompany, postNewOpportunitiesUniversity } from '../controllers/postController.js';
+import { addPost, commentOnPost, getAllSpecificUsersPosts, getComments, getFeed, getMyFeed, getNewFeed, getSinglePost, postNewOpportunitiesCompany, postNewOpportunitiesUniversity } from '../controllers/postController.js';
 import protect from '../middlewares/protect.js';
 const postRouter = express.Router();
 
@@ -12,6 +12,10 @@ postRouter.post('/postNewOpportunititesUniversity', protect, postNewOpportunitie
 
 postRouter.get('/getLatestFeed', protect, getNewFeed)
 postRouter.get('/myFeed', protect, getMyFeed)
+postRouter.get('/singlePost/:id', getSinglePost)
+
+postRouter.post('/comment', protect, commentOnPost)
+postRouter.get('/getComments/:postId', getComments)
 // authRouter.post('/post/:id', protect);
 // authRouter.put('/post/like/:id', protect);
 // authRouter.get('/post/dislike/:id', protect)
