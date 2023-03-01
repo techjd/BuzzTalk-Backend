@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const OppoSchema = new Schema({
@@ -32,4 +32,5 @@ const OppoSchema = new Schema({
   },
 });
 
-module.exports = Opportunities = mongoose.model('opportuities', OppoSchema);
+const Opportunities = mongoose.model('opportuities', OppoSchema);
+export default Opportunities

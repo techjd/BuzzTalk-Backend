@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { COMMENT, POST } from "../utils/Constants";
+// import { COMMENT, POST } from "../utils/Constants";
 
 const PostLikesSchema = new mongoose.Schema(
     {

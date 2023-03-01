@@ -3,6 +3,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3
 import crypto from 'crypto'
 
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { SUCCESS } from "../utils/Constants.js";
 
 const bucketName = process.env.bucket_name
 const bucketRegion = process.env.bucket_region
@@ -21,16 +22,22 @@ const s3 = new S3Client({
 
 const uploadImage = async(req, res) => {
     try {
+        let imageName = randomImageName()
+
         const command = new PutObjectCommand({
             Bucket: bucketName,
-            Key: randomImageName(),
+            Key: imageName,
             Body: req.file.buffer,
             ContentType: req.file.mimetype
         })
 
         await s3.send(command)
 
-        res.json({ message: "Image Uploaded Successfully" })
+        res.json({ 
+            status: SUCCESS,
+            message: "Image Uploaded Successfully",
+            data: imageName
+        })
     } catch (error) {
         console.log(error)
         res.status(500).json(fixedresponse)
@@ -39,14 +46,23 @@ const uploadImage = async(req, res) => {
 
 const getImage = async(req, res) => {
     try {
+        const { imageName } = req.body
+        console.log(imageName)
+
         const getObjectParams = {
             Bucket: bucketName,
-            Key: "c5880593c8834326fbb659e698c584499df8205a40cd75835c77cc2aacc0f219"
+            Key: imageName
         }
         const command = new GetObjectCommand(getObjectParams);
-        const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
-
-        res.json({ url: url })
+        const url = await getSignedUrl(s3, command, { expiresIn: 36000 });
+        
+        console.log(url)
+        console.log(typeof url)
+        res.json({ 
+            status: SUCCESS,
+            message: 'IMAGE URL',
+            data: url
+        })
     } catch (error) {
         console.log(error)
         res.status(500).json(fixedresponse)

@@ -617,6 +617,11 @@ const getNotifications = async (req, res) => {
                 path: "userId",
                 select: '-password -notificationId'
             }
+        }).populate({
+            path: "userId"
+        })
+        .sort({ 
+            "createdAt": -1
         })
 
         res.status(201).json({
@@ -629,7 +634,6 @@ const getNotifications = async (req, res) => {
         res.status(500).json(fixedresponse);
     }
 }
-
 
 export { 
     getInfo,

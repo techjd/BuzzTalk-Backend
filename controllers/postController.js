@@ -3,7 +3,7 @@ import FollowerFollowing from '../models/FollowerFollowing.js';
 import HashTagsFeed from '../models/HashTagFeed.js';
 import HashTags from '../models/Hashtags.js';
 import Posts from '../models/Post.js';
-import { COMMENT, COMMENTED, FEED, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MY_FEED, NEW_FEED, POSTADDED, POSTED, SINGLE_POST, SUCCESS, TAGGED } from '../utils/Constants.js';
+import { COMMENT, COMMENTED, FEED, HASH_TAG_POSTS, LIKED, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MY_FEED, NEW_FEED, POSTADDED, POSTED, SINGLE_POST, SUCCESS, TAGGED } from '../utils/Constants.js';
 import FailureResponse, { fixedresponse } from '../utils/FailureResponse.js';
 const fcm_server_key = process.env.firebase_fcm_server_key
 import { initializeApp } from 'firebase-admin/app';
@@ -18,6 +18,7 @@ import OpportunitiesByCompany from '../models/OpportunitiesByCompany.js';
 import NewFeed from '../models/NewFeed.js';
 import OpportunitiesByUniversity from '../models/OpportunitiesByUniversity.js';
 import Comments from '../models/Comments.js';
+import PostLikes from '../models/PostLikes.js';
 // var FCM = require('fcm-node');
 var serverKey = process.env.firebase_fcm_server_key; //put your server key here
 var fcm = new FCM(serverKey);
@@ -28,7 +29,7 @@ var fcm = new FCM(serverKey);
 
 const addPost = async (req, res) => {
     try {
-        const { content, taggedUsers, hashTags } = req.body;
+        const { content, taggedUsers, hashTags, postsFor, imageUrl, isImage } = req.body;
 
         const currentUser = await User.findById(req.userId);
         
@@ -40,11 +41,12 @@ const addPost = async (req, res) => {
         const newPost = new Posts({
             userId: req.userId,
             content: content,
+            postsFor: postsFor,
+            imageUrl: imageUrl,
             likes: 0,
             comments: 0
         })
         
-
         // Saving a new post
         const post = await newPost.save();
         
@@ -92,30 +94,30 @@ const addPost = async (req, res) => {
 
                 await notification.save()
                 
-                if(user.notificationId) {
+                // if(user.notificationId) {
 
-                    console.log("sending notification")
+                //     console.log("sending notification")
 
-                    const message = {
-                        to: user.notificationId,
-                        collapse_key: "collapse",
+                //     const message = {
+                //         to: user.notificationId,
+                //         collapse_key: "collapse",
             
-                        notification: {
-                          title: "Buzz Talk",
-                          body: `${currentUser.firstName} ${currentUser.lastName} tagged you in their post`
-                        },
-                      };
+                //         notification: {
+                //           title: "Buzz Talk",
+                //           body: `${currentUser.firstName} ${currentUser.lastName} tagged you in their post`
+                //         },
+                //       };
                     
     
-                    fcm.send(message, function (err, messageID) {
-                        if (err) {
-                          console.log(err);
-                          console.log("Something has gone wrong!");
-                        } else {
-                          console.log("Sent with message ID: ", messageID);
-                        }
-                    });
-                }
+                //     fcm.send(message, function (err, messageID) {
+                //         if (err) {
+                //           console.log(err);
+                //           console.log("Something has gone wrong!");
+                //         } else {
+                //           console.log("Sent with message ID: ", messageID);
+                //         }
+                //     });
+                // }
             }
         }
         
@@ -276,8 +278,10 @@ const getFeed = async (req, res) => {
                         select: '-password -notificationId'
                     }
                 }
-                )
-        
+                ).sort({
+                    "createdAt": -1
+                })
+                
         res.status(201).json({
             status: SUCCESS,
             message: FEED,
@@ -329,7 +333,7 @@ const getMyFeed = async(req, res) => {
         const myposts = await Posts.find({ userId: req.userId }).populate({ 
             path: 'userId', 
             select: '-password -notificationId' 
-        })
+        }).sort({ "createdAt": -1 })
 
         return res.status(202).json({
             status: SUCCESS,
@@ -351,7 +355,85 @@ const getMyFeed = async(req, res) => {
 
 const likePost = async (req, res) => {
     try {
-        
+        const { postId } = req.body
+
+        const isLiked = await PostLikes.find({ 
+            $and: [
+                {"userId": req.userId},
+                {"postId": postId}
+            ]
+        })
+
+        const post = await Posts.findById(postId)
+            
+        console.log(isLiked)
+
+        if (isLiked.length == 1) {
+            post.likes -= post.likes
+            await post.save()
+
+            await PostLikes.findOneAndDelete(
+                {
+                    $and: [
+                        {"userId": req.userId},
+                        {"postId": postId}
+                    ]
+                }
+            )
+
+            return res.status(201).json({
+                status: SUCCESS,
+                message: "DISLIKED",
+                data: postId
+            })
+        }
+
+        const newLike = new PostLikes({
+            userId: req.userId,
+            postId: postId
+        })
+
+        await newLike.save()
+
+        post.likes += 1
+        await post.save()
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: LIKED,
+            data: postId
+        })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(fixedresponse);
+    }
+}
+
+const checkIfUserHasLikedPost = async(req, res) => {
+    try {
+        const { postId } = req.body
+
+        const isLiked = await PostLikes.find({ 
+            $and: [
+                {"userId": req.userId},
+                {"postId": postId}
+            ]
+        })
+
+        if(isLiked.length == 1) {
+            return res.status(201).json({
+                status: SUCCESS,
+                message: "LIKED",
+                data: true
+            })
+        }
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: "NOT LIKED",
+            data: false
+        })
+
     } catch (error) {
         console.log(error);
         res.status(500).json(fixedresponse);
@@ -435,20 +517,6 @@ const createNewHashTag = (req, res) => {
         res.status(500).json(fixedresponse);
     }
 }
-
-// @route  POST api/post/getAllPostsOfAHashTag/
-// @desc   Get All Posts of a hashtag
-// @access Private
-
-const getAllPostsofHashTags = async (req, res) => {
-    try {
-        
-    } catch (error) {
-        console.log(error);
-        res.status(500).json(fixedresponse);
-    }
-}
-
 
 // Post new opportunities by company
 
@@ -571,6 +639,9 @@ const commentOnPost = async(req, res) => {
 
             await comment.save()
 
+            post.comments += 1
+            await post.save()
+
             // LIKED , COMMENTED OR TAGGED
             const notification = new Notifications({
                 userId: user.id, //Enter user id of other user over here,
@@ -636,6 +707,80 @@ const getComments = async(req, res) => {
     }
 }
 
+
+// @route  POST api/post/getHashTagPosts
+// @desc   Get Posts from a HashTag
+// @access Private
+
+const getHashTagPosts = async(req, res) => {
+    try {
+        const { hashTagId } = req.body
+
+        const posts = await HashTagsFeed
+            .find({ hashtagId:  hashTagId})
+            .populate({ 
+                "path": "postId",
+                populate: {
+                    "path": "userId",
+                    "select": "-notificationId -password"
+                }
+            })
+            .populate({
+                "path": "hashtagId"
+            })
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: HASH_TAG_POSTS,
+            data: {
+                posts: posts
+            }
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+
+
+const getOtherUserFeed = async(req, res) => {
+    try {
+        const { userId } = req.body;
+
+        const posts = await Posts.find({ userId: userId })
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: 'OTHER_USER_FEED',
+            data: {
+                posts: posts
+            }
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json(fixedresponse)    
+    }
+}
+
+// Get HashTag from a particular hastag
+
+const fetchHashTagId = async(req, res) => {
+    try {
+        const { hashTag } = req.body
+
+        const hashtag = await HashTags.findOne({ hashTag: hashTag })
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: 'HASH_TAG_ID',
+            data: hashtag
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+
 export { 
     addPost, 
     getSinglePost, 
@@ -646,5 +791,9 @@ export {
     postNewOpportunitiesUniversity,
     getMyFeed,
     commentOnPost,
-    getComments
+    getComments,
+    getHashTagPosts,
+    fetchHashTagId,
+    likePost,
+    checkIfUserHasLikedPost
 }

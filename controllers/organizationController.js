@@ -5,6 +5,7 @@ import bcrypt, { hash } from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from "dotenv"
 import OrganizationFollower from '../models/OrganizationFollowers.js';
+import Opportunities from '../models/Opportunities.js';
 dotenv.config()
 const KEY = process.env.secret_key;
 
@@ -257,11 +258,57 @@ const unFollow = async(req, res) => {
     }
 }
 
+const createOppo = async(req, res) => {
+    try {
+        const { lookingFor, shortDesc, reqSkills, budget, postsFor } = req.body
+
+        const oppo = new Opportunities({
+            orgId: req.userId,
+            lookingFor: lookingFor,
+            shortDescription: shortDesc,
+            requiredSkills: reqSkills,
+            budget: budget,
+            postsFor: postsFor
+        })
+
+        await oppo.save()
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: "OPPORTUNITY CREATED",
+            data: 'CREATED'
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+
+const getAllOppo = async(req, res) => {
+    try {
+        const opportunities = await Opportunities.find().populate({
+            path: "orgId"
+        }).sort({ "createdAt": -1 })
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: 'ALL OPPORTUNITIES',
+            data: {
+                opportunities: opportunities
+            }
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+
 export { 
     registerOrg, 
     loginOrg ,
     getOrgInfo,
     followOrg,
     checkIfUserIsFollowing,
-
+    createOppo,
+    getAllOppo
 }

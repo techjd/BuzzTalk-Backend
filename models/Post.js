@@ -6,15 +6,7 @@ const PostSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'users'
         },
-        orgId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'organizations'
-        },
         content: {
-            type: String,
-            required: true
-        },
-        title: {
             type: String,
             required: true
         },
@@ -23,6 +15,9 @@ const PostSchema = new mongoose.Schema(
                 required: true
             }
         ],
+        imageUrl: {
+            type: String,
+        },
         likes: {
             type: Number,
             default: 0
