@@ -31,7 +31,10 @@ app.use(morgan('combined'))
 
 io.on('connection', (socket) => {
   console.log(socket.id);
-  app.set('socket', socket);
+  app.use((req, res, next) => {
+    req.socket = socket
+    next()
+  })
   // // convenience function to log server messages on the client
   // function log() {
   //   var array = ['Message from server:'];
