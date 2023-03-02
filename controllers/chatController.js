@@ -397,6 +397,8 @@ const createGroup = async(req, res) => {
 
         const group = await newGroup.save();
 
+        groupUsers.push(req.userId)
+
         for(const users of groupUsers) {
             const grpUser = new GroupMembers({
                 groupId: group.id,
@@ -409,9 +411,7 @@ const createGroup = async(req, res) => {
         return res.status(201).json({
             status: SUCCESS,
             message: GROUP_CREATED_SUCCESSFULLY,
-            data: {
-                group: group
-            }
+            data: "group created successfully"
         })
     } catch (error) {
         console.log(error)
