@@ -15,10 +15,6 @@ const GroupMessagesSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'groups',
             required: true
-        },
-        anotherMessageId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'groupmessages'
         }
     },
     {

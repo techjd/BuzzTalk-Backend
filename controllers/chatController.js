@@ -2,7 +2,7 @@ import Conversations from "../models/Conversations.js";
 import OnlineUsers from "../models/OnlineUsers.js";
 import Messages from "../models/Messages.js";
 import FailureResponse, { fixedresponse } from '../utils/FailureResponse.js';
-import { ALL_CONVERSATIONS, ALL_MESSAGES, GET_ALL_USER_GROUPS, GROUP_CREATED_SUCCESSFULLY, GROUP_MESSAGE_SENT, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MESSAGE_SUCCESSFULLY_SENT_WHEN_ONLINE, NEW_MESSAGE, SUCCESS, USER_ADDED_TO_ONLINE_LIST, USER_ALREADY_ONLINE, USER_NOT_FOUND_IN_ONLINE_LIST, USER_OFFLINE, USER_ONLINE, USER_REMOVED_FROM_ONLNE_LIST } from "../utils/Constants.js";
+import { ALL_CONVERSATIONS, ALL_MESSAGES, GET_ALL_USER_GROUPS, GROUP_CREATED_SUCCESSFULLY, GROUP_MESSAGES, GROUP_MESSAGE_SENT, MESSAGE_SUCCESSFULLY_SENT_FOR_FUTURE, MESSAGE_SUCCESSFULLY_SENT_WHEN_ONLINE, NEW_MESSAGE, SUCCESS, USER_ADDED_TO_ONLINE_LIST, USER_ALREADY_ONLINE, USER_NOT_FOUND_IN_ONLINE_LIST, USER_OFFLINE, USER_ONLINE, USER_REMOVED_FROM_ONLNE_LIST } from "../utils/Constants.js";
 import mongoose from "mongoose";
 import Groups from "../models/Groups.js";
 import GroupMembers from "../models/GroupMembers.js";
@@ -45,12 +45,18 @@ const makeMeOnline = async (req, res) => {
         const user = await User.findById(req.userId)
 
         const groups = await GroupMembers.find({ userId: req.userId })
+        
+        // req.io.on("connection", (socket) => {
+        //   socket.on("grp", (data) => {
+        //     console.log("Over Here ")     
+        //   })   
+        // })
 
-        if(groups) {
-            for(const group in groups) {
-                req.socket.join(group.id)
-            }
-        }
+        // if(groups) {
+        //     for(const group in groups) {
+        //         req.socket.join(group.id)
+        //     }
+        // }
 
         res.status(201).json({
             status: SUCCESS,
@@ -451,7 +457,7 @@ const getUserGroups = async(req, res) => {
 
 const sendMessageToGroup = async(req , res) => {
     try {
-        const { message, anotherMessageId } = req.body
+        const { message } = req.body
 
         const groupId = req.params.groupId
 
@@ -465,39 +471,28 @@ const sendMessageToGroup = async(req , res) => {
             lastMessage: message
         }
 
-        await Groups.findOneAndUpdate(filter, update)
-        
-        let grpMsg;
-        let messageToSend;
-
-        if(anotherMessageId) {
-            grpMsg = new GroupMessages({
-                message: message,
-                anotherMessageId: anotherMessageId
-            })
-
-            messageToSend = {
-                status: SUCCESS,
-                message: NEW_MESSAGE,
-                data: {
-                    content: message,
-                    anotherMessageId: anotherMessageId
-                }
-            }
-        } else {
-            grpMsg = new GroupMessages({
-                message: message
-            })
-
-            messageToSend = {
-                status: SUCCESS,
-                message: NEW_MESSAGE,
-                data: {
-                    content: message,
-                }
-            }
+        const options = {
+            upsert: true, 
+            new: true, 
+            setDefaultsOnInsert: true
         }
 
+        await Groups.findOneAndUpdate(filter, update, options)
+        
+        let grpMsg = new GroupMessages({
+            message: message,
+            userId: req.userId,
+            groupId
+        })
+
+        const messageToSend = {
+            status: SUCCESS,
+            message: NEW_MESSAGE,
+            data: {
+                message: message
+            }
+        }
+        
         await grpMsg.save()
 
         req.io.in(grp.id).emit(NEW_MESSAGE, messageToSend)
@@ -520,7 +515,23 @@ const sendMessageToGroup = async(req , res) => {
 
 const getGroupMessages = async(req, res) => {
     try {
-        
+        const grpId = req.params.groupId
+        const groupMessages = await GroupMessages
+        .find({ groupId: grpId })
+        .populate({
+            path: "userId",
+            select: '-password -notificationId'
+        }).sort({
+            createdAt: 1
+        })
+
+        return res.status(201).json({
+            status: SUCCESS,
+            message: GROUP_MESSAGES,
+            data: {
+                groupMesages: groupMessages
+            }
+        })
     } catch (error) {
         console.error(error)
         res.status(500).json(fixedresponse)

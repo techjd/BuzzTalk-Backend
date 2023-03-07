@@ -31,9 +31,8 @@ app.use(morgan('combined'))
 
 io.on('connection', (socket) => {
   console.log(socket.id);
-  app.use((req, res, next) => {
-    req.socket = socket
-    next()
+  socket.on('grp', (data) => {
+    console.log(data)
   })
 });
 

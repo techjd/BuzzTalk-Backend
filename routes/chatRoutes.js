@@ -13,7 +13,7 @@ chatRouter.get('/getMessagesByDate', protect, getMessagesByDate)
 // chatRouter.post('/register', register);
 chatRouter.post('/createGroup', protect, createGroup)
 chatRouter.get('/getGroups', protect, getUserGroups)
-chatRouter.post('/groups/sendMessage', protect, sendMessageToGroup)
-chatRouter.post('/groups/getGroupMessages', protect, getGroupMessages)
+chatRouter.post('/groups/sendMessage/:groupId', protect, sendMessageToGroup)
+chatRouter.post('/groups/getGroupMessages/:groupId', protect, getGroupMessages)
 
 export default chatRouter;
