@@ -1,4 +1,4 @@
-import express, { json, urlencoded } from 'express';
+import express from 'express';
 import morgan from "morgan"
 import connectDB from './config/db.js';
 import { SUCCESS } from './utils/constants.js';
