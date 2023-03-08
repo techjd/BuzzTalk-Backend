@@ -71,3 +71,5 @@ httpServer.listen(PORT, () =>  {
   console.log(SUCCESS)
   console.log(`Server started on PORT ${PORT}`)
 });
+// "@aws-sdk/client-s3": "^3.264.0",
+//     "@aws-sdk/s3-request-presigner": "^3.264.0",

@@ -17,8 +17,8 @@
   "author": "BuzzTalk Developers",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.264.0",
-    "@aws-sdk/s3-request-presigner": "^3.264.0",
+    "@aws-sdk/client-s3": "^3.282.0",
+    "@aws-sdk/s3-request-presigner": "^3.282.0",
     "bcrypt": "^5.0.1",
     "config": "^3.3.8",
     "dotenv": "^16.0.2",
