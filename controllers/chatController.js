@@ -451,6 +451,26 @@ const getUserGroups = async(req, res) => {
     }
 }
 
+const getSingleGroupInfo = async(req, res) => {
+    try {
+        const grpId = req.params.groupId
+        const grp = await Groups.findById(grpId)
+        const grpMembers = await GroupMembers.find({ groupId: grpId }).populate({ path: "userId" })
+
+        return res.status(202).json({
+            status: SUCCESS,
+            message: 'SINGLE GROUP INFO',
+            data: {
+                groupDetails: grp,
+                groupMembers: grpMembers
+            }
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json(fixedresponse)
+    }
+}
+
 // @route  POST api/chat/groups/sendMessage
 // @desc   Send Message To a Group
 // @access Private
