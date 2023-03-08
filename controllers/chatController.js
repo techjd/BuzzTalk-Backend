@@ -451,11 +451,20 @@ const getUserGroups = async(req, res) => {
     }
 }
 
+// @route  GET api/chat/groups/getSingleGroupInfo/{groupId}
+// @desc   Send Message To a Group
+// @access Private
+
 const getSingleGroupInfo = async(req, res) => {
     try {
         const grpId = req.params.groupId
         const grp = await Groups.findById(grpId)
-        const grpMembers = await GroupMembers.find({ groupId: grpId }).populate({ path: "userId" })
+        const grpMembers = await GroupMembers
+                .find({ groupId: grpId })
+                .populate({ 
+                    path: "userId",
+                    select: "-notificationId -password" 
+                })
 
         return res.status(202).json({
             status: SUCCESS,
@@ -502,18 +511,25 @@ const sendMessageToGroup = async(req , res) => {
         let grpMsg = new GroupMessages({
             message: message,
             userId: req.userId,
-            groupId
+            groupId: groupId
         })
 
         const messageToSend = {
             status: SUCCESS,
             message: NEW_MESSAGE,
             data: {
-                message: message
+                message: grpMsg
             }
         }
         
         await grpMsg.save()
+
+        await grpMsg.populate({ 
+            path: "userId",
+            select: "-notificationId -password" 
+         })
+        
+         console.log(grpMsg)
 
         req.io.in(grp.id).emit(NEW_MESSAGE, messageToSend)
 
@@ -568,5 +584,6 @@ export {
     createGroup,
     getUserGroups,
     sendMessageToGroup,
-    getGroupMessages
+    getGroupMessages,
+    getSingleGroupInfo
 }

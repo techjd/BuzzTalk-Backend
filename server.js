@@ -1,4 +1,3 @@
-import FailureResponse from './utils/FailureResponse.js';
 import express from 'express';
 import morgan from "morgan"
 import connectDB from './config/db.js';
@@ -32,8 +31,12 @@ app.use(morgan('combined'))
 
 io.on('connection', (socket) => {
   console.log(socket.id);
-  socket.on('grp', (data) => {
-    console.log(data)
+  socket.on('grp', (grpId) => {
+    socket.join(grpId)
+    // console.log(data)
+  })
+  socket.on("leave", (grpId) => {
+    socket.leave(grpId)
   })
 });
 
