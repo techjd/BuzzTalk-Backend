@@ -21,8 +21,8 @@ config()
 
 
 // Init MiddleWare
-app.use(json());
-app.use(urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 //Connect Database
 connectDB();
